@@ -159,7 +159,7 @@ export class Nodes extends React.Component<Props> {
           isConfigurable
           tableId="nodes"
           className="Nodes"
-          store={nodesStore} isClusterScoped
+          store={nodesStore}
           isReady={nodesStore.isLoaded}
           dependentStores={[podsStore]}
           isSelectable={false}
