@@ -18,68 +18,37 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
 import difference from "lodash/difference";
 import uniqBy from "lodash/uniqBy";
-import { clusterRoleBindingApi, IRoleBindingSubject, RoleBinding, roleBindingApi } from "../../api/endpoints";
-import { KubeObjectStore, KubeObjectStoreLoadingParams } from "../../kube-object.store";
-import { autoBind } from "../../utils";
-import { apiManager } from "../../api/api-manager";
 
-export class RoleBindingsStore extends KubeObjectStore<RoleBinding> {
+import { apiManager } from "../../../api/api-manager";
+import { ClusterRoleBinding, clusterRoleBindingApi, ClusterRoleBindingSubject } from "../../../api/endpoints";
+import { KubeObjectStore } from "../../../kube-object.store";
+import { autobind } from "../../../utils";
+
+@autobind()
+export class ClusterRoleBindingsStore extends KubeObjectStore<ClusterRoleBinding> {
   api = clusterRoleBindingApi;
 
-  constructor() {
-    super();
-    autoBind(this);
-  }
-
-  getSubscribeApis() {
-    return [clusterRoleBindingApi, roleBindingApi];
-  }
-
-  protected sortItems(items: RoleBinding[]) {
+  protected sortItems(items: ClusterRoleBinding[]) {
     return super.sortItems(items, [
       roleBinding => roleBinding.kind,
       roleBinding => roleBinding.getName()
     ]);
   }
 
-  protected loadItem(params: { name: string; namespace?: string }) {
-    if (params.namespace) return roleBindingApi.get(params);
-
-    return clusterRoleBindingApi.get(params);
-  }
-
-  protected async loadItems(params: KubeObjectStoreLoadingParams): Promise<RoleBinding[]> {
-    const items = await Promise.all([
-      super.loadItems({ ...params, api: clusterRoleBindingApi }),
-      super.loadItems({ ...params, api: roleBindingApi }),
-    ]);
-
-    return items.flat();
-  }
-
-  protected async createItem(params: { name: string; namespace?: string }, data?: Partial<RoleBinding>) {
-    if (params.namespace) {
-      return roleBindingApi.create(params, data);
-    } else {
-      return clusterRoleBindingApi.create(params, data);
-    }
-  }
-
   async updateSubjects(params: {
-    roleBinding: RoleBinding;
-    addSubjects?: IRoleBindingSubject[];
-    removeSubjects?: IRoleBindingSubject[];
+    roleBinding: ClusterRoleBinding;
+    addSubjects?: ClusterRoleBindingSubject[];
+    removeSubjects?: ClusterRoleBindingSubject[];
   }) {
     const { roleBinding, addSubjects, removeSubjects } = params;
     const currentSubjects = roleBinding.getSubjects();
     let newSubjects = currentSubjects;
 
     if (addSubjects) {
-      newSubjects = uniqBy(currentSubjects.concat(addSubjects), ({ kind, name, namespace }) => {
-        return [kind, name, namespace].join("-");
+      newSubjects = uniqBy(currentSubjects.concat(addSubjects), ({ kind, name }) => {
+        return [kind, name].join("-");
       });
     } else if (removeSubjects) {
       newSubjects = difference(currentSubjects, removeSubjects);
@@ -92,9 +61,6 @@ export class RoleBindingsStore extends KubeObjectStore<RoleBinding> {
   }
 }
 
-export const roleBindingsStore = new RoleBindingsStore();
+export const clusterRoleBindingsStore = new ClusterRoleBindingsStore();
 
-apiManager.registerStore(roleBindingsStore, [
-  roleBindingApi,
-  clusterRoleBindingApi,
-]);
+apiManager.registerStore(clusterRoleBindingsStore);

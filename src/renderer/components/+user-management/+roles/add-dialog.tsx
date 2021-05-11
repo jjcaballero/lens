@@ -19,20 +19,20 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import "./create-service-account-dialog.scss";
+import "./add-dialog.scss";
 
 import React from "react";
-import { makeObservable, observable } from "mobx";
+import { observable, makeObservable } from "mobx";
 import { observer } from "mobx-react";
-import { Dialog, DialogProps } from "../dialog";
-import { Wizard, WizardStep } from "../wizard";
-import { SubTitle } from "../layout/sub-title";
-import { serviceAccountsStore } from "./service-accounts.store";
-import { Input } from "../input";
-import { systemName } from "../input/input_validators";
-import { NamespaceSelect } from "../+namespaces/namespace-select";
-import { Notifications } from "../notifications";
-import { showDetails } from "../kube-object";
+
+import { NamespaceSelect } from "../../+namespaces/namespace-select";
+import { Dialog, DialogProps } from "../../dialog";
+import { Input } from "../../input";
+import { showDetails } from "../../kube-object";
+import { SubTitle } from "../../layout/sub-title";
+import { Notifications } from "../../notifications";
+import { Wizard, WizardStep } from "../../wizard";
+import { rolesStore } from "./store";
 
 interface Props extends Partial<DialogProps> {
 }
@@ -42,9 +42,9 @@ const dialogState = observable.object({
 });
 
 @observer
-export class CreateServiceAccountDialog extends React.Component<Props> {
-  @observable name = "";
-  @observable namespace = "default";
+export class AddRoleDialog extends React.Component<Props> {
+  @observable roleName = "";
+  @observable namespace = "";
 
   constructor(props: Props) {
     super(props);
@@ -60,48 +60,55 @@ export class CreateServiceAccountDialog extends React.Component<Props> {
   }
 
   close = () => {
-    CreateServiceAccountDialog.close();
+    AddRoleDialog.close();
   };
 
-  createAccount = async () => {
-    const { name, namespace } = this;
+  reset = () => {
+    this.roleName = "";
+    this.namespace = "";
+  };
 
+  createRole = async () => {
     try {
-      const serviceAccount = await serviceAccountsStore.create({ namespace, name });
+      const role = await rolesStore.create({ name: this.roleName, namespace: this.namespace });
 
-      this.name = "";
-      showDetails(serviceAccount.selfLink);
+      showDetails(role.selfLink);
+      this.reset();
       this.close();
     } catch (err) {
-      Notifications.error(err);
+      Notifications.error(err.toString());
     }
   };
 
   render() {
     const { ...dialogProps } = this.props;
-    const { name, namespace } = this;
-    const header = <h5>Create Service Account</h5>;
+    const header = <h5>Create Role</h5>;
 
     return (
       <Dialog
         {...dialogProps}
-        className="CreateServiceAccountDialog"
+        className="AddRoleDialog"
         isOpen={dialogState.isOpen}
         close={this.close}
       >
         <Wizard header={header} done={this.close}>
-          <WizardStep nextLabel="Create" next={this.createAccount}>
-            <SubTitle title="Account Name" />
+          <WizardStep
+            contentClass="flex gaps column"
+            nextLabel="Create"
+            next={this.createRole}
+          >
+            <SubTitle title="Role Name" />
             <Input
-              autoFocus required
-              placeholder="Enter a name"
-              validators={systemName}
-              value={name} onChange={v => this.name = v.toLowerCase()}
+              required autoFocus
+              placeholder="Name"
+              iconLeft="supervisor_account"
+              value={this.roleName}
+              onChange={v => this.roleName = v}
             />
             <SubTitle title="Namespace" />
             <NamespaceSelect
               themeName="light"
-              value={namespace}
+              value={this.namespace}
               onChange={({ value }) => this.namespace = value}
             />
           </WizardStep>

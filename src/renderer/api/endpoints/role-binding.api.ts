@@ -24,15 +24,15 @@ import { KubeObject } from "../kube-object";
 import { KubeApi } from "../kube-api";
 import type { KubeJsonApiData } from "../kube-json-api";
 
-export interface IRoleBindingSubject {
+export interface RoleBindingSubject {
   kind: string;
   name: string;
-  namespace?: string;
+  namespace: string;
   apiGroup?: string;
 }
 
 export interface RoleBinding {
-  subjects?: IRoleBindingSubject[];
+  subjects?: RoleBindingSubject[];
   roleRef: {
     kind: string;
     name: string;

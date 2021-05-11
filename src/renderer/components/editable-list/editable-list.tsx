@@ -21,11 +21,12 @@
 
 import "./editable-list.scss";
 
+import { observer } from "mobx-react";
+import { makeObservable } from "mobx";
 import React from "react";
+
 import { Icon } from "../icon";
 import { Input } from "../input";
-import { observable, makeObservable } from "mobx";
-import { observer } from "mobx-react";
 import { boundMethod } from "../../utils";
 
 export interface Props<T> {
@@ -47,7 +48,6 @@ const defaultProps: Partial<Props<any>> = {
 @observer
 export class EditableList<T> extends React.Component<Props<T>> {
   static defaultProps = defaultProps as Props<any>;
-  @observable currentNewItem = "";
 
   constructor(props: Props<T>) {
     super(props);
@@ -55,12 +55,12 @@ export class EditableList<T> extends React.Component<Props<T>> {
   }
 
   @boundMethod
-  onSubmit(val: string) {
+  onSubmit(val: string, evt: React.KeyboardEvent) {
     const { add } = this.props;
 
     if (val) {
+      evt.preventDefault();
       add(val);
-      this.currentNewItem = "";
     }
   }
 
@@ -71,17 +71,15 @@ export class EditableList<T> extends React.Component<Props<T>> {
       <div className="EditableList">
         <div className="el-header">
           <Input
-            theme="round-black"
-            value={this.currentNewItem}
+            theme="round"
             onSubmit={this.onSubmit}
             placeholder={placeholder}
-            onChange={val => this.currentNewItem = val}
           />
         </div>
         <div className="el-contents">
           {
             items.map((item, index) => (
-              <div key={`${item}${index}`} className="el-item Badge">
+              <div key={`${item}${index}`} className="el-item">
                 <div>{renderItem(item, index)}</div>
                 <div className="el-value-remove">
                   <Icon material="delete_outline" onClick={() => remove(({ index, oldItem: item }))} />

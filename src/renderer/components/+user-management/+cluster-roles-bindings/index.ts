@@ -18,27 +18,6 @@
  * IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-import { KubeApi } from "../kube-api";
-import { KubeObject } from "../kube-object";
-
-export class ClusterRole extends KubeObject {
-  static kind = "ClusterRole";
-  static namespaced = false;
-  static apiBase = "/apis/rbac.authorization.k8s.io/v1/clusterroles";
-
-  rules: {
-    verbs: string[];
-    apiGroups: string[];
-    resources: string[];
-    resourceNames?: string[];
-  }[];
-
-  getRules() {
-    return this.rules || [];
-  }
-}
-
-export const clusterRoleApi = new KubeApi({
-  objectConstructor: ClusterRole,
-});
+export * from "./view";
+export * from "./details";
+export * from "./add-dialog";
