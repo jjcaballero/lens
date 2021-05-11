@@ -23,8 +23,8 @@ import "./editable-list.scss";
 
 import React from "react";
 import { Icon } from "../icon";
-import { Input } from "../input";
 import { observable, makeObservable } from "mobx";
+import { Input, InputValidator } from "../input";
 import { observer } from "mobx-react";
 import { boundMethod } from "../../utils";
 
@@ -33,6 +33,7 @@ export interface Props<T> {
   add: (newItem: string) => void,
   remove: (info: { oldItem: T, index: number }) => void,
   placeholder?: string,
+  validators?: InputValidator | InputValidator[];
 
   // An optional prop used to convert T to a displayable string
   // defaults to `String`
@@ -65,15 +66,17 @@ export class EditableList<T> extends React.Component<Props<T>> {
   }
 
   render() {
-    const { items, remove, renderItem, placeholder } = this.props;
+    const { items, remove, renderItem, placeholder, validators } = this.props;
 
     return (
       <div className="EditableList">
         <div className="el-header">
           <Input
             theme="round-black"
+            required
             value={this.currentNewItem}
             onSubmit={this.onSubmit}
+            validators={validators}
             placeholder={placeholder}
             onChange={val => this.currentNewItem = val}
           />
