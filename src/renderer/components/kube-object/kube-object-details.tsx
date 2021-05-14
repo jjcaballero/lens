@@ -32,8 +32,8 @@ import { apiManager } from "../../api/api-manager";
 import { crdStore } from "../+custom-resources/crd.store";
 import { CrdResourceDetails } from "../+custom-resources";
 import { KubeObjectMenu } from "./kube-object-menu";
-import { kubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 import type { CustomResourceDefinition } from "../../api/endpoints";
+import { KubeObjectDetailRegistry } from "../../api/kube-object-detail-registry";
 
 /**
  * Used to store `object.selfLink` to show more info about resource in the details panel.
@@ -136,20 +136,35 @@ export class KubeObjectDetails extends React.Component {
   render() {
     const { object, isLoading, loadingError, isCrdInstance } = this;
     const isOpen = !!(object || isLoading || loadingError);
-    let title = "";
-    let details: React.ReactNode[];
 
-    if (object) {
-      const { kind, getName } = object;
+    if (!object) {
+      return (
+        <Drawer
+          className="KubeObjectDetails flex column"
+          open={isOpen}
+          title=""
+          toolbar={<KubeObjectMenu object={object} toolbar={true} />}
+          onClose={hideDetails}
+        >
+          {isLoading && <Spinner center />}
+          {loadingError && <div className="box center">{loadingError}</div>}
+        </Drawer>
+      );
+    }
 
-      title = `${kind}: ${getName()}`;
-      details = kubeObjectDetailRegistry.getItemsForKind(object.kind, object.apiVersion).map((item, index) => {
-        return <item.components.Details object={object} key={`object-details-${index}`}/>;
-      });
+    const { kind, getName } = object;
+    const title = `${kind}: ${getName()}`;
+    const details = KubeObjectDetailRegistry
+      .getInstance()
+      .getItemsForKind(object.kind, object.apiVersion)
+      .map((item, index) => (
+        <item.components.Details object={object} key={`object-details-${index}`} />
+      ));
 
-      if (isCrdInstance && details.length === 0) {
-        details.push(<CrdResourceDetails object={object as CustomResourceDefinition}/>);
-      }
+    console.log(details);
+
+    if (isCrdInstance && details.length === 0) {
+      details.push(<CrdResourceDetails object={object as CustomResourceDefinition}/>);
     }
 
     return (

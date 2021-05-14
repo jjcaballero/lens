@@ -28,8 +28,8 @@ import { Dialog } from "../dialog";
 import { EventEmitter } from "../../../common/event-emitter";
 import { subscribeToBroadcast } from "../../../common/ipc";
 import { CommandDialog } from "./command-dialog";
-import { CommandRegistration, commandRegistry } from "../../../extensions/registries/command-registry";
 import type { ClusterId } from "../../../common/cluster-store";
+import { CommandRegistration, CommandRegistry } from "../../../extensions/registries/command-registry";
 
 export type CommandDialogEvent = {
   component: React.ReactElement
@@ -73,12 +73,12 @@ export class CommandContainer extends React.Component<CommandContainerProps> {
   }
 
   private findCommandById(commandId: string) {
-    return commandRegistry.getItems().find((command) => command.id === commandId);
+    return CommandRegistry.getInstance().getItems().find((command) => command.id === commandId);
   }
 
   private runCommand(command: CommandRegistration) {
     command.action({
-      entity: commandRegistry.activeEntity
+      entity: CommandRegistry.getInstance().activeEntity
     });
   }
 

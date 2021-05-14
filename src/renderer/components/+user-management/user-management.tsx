@@ -82,15 +82,6 @@ export class UserManagement extends React.Component {
       });
     }
 
-    if (isAllowedResource("clusterroles")) {
-      tabRoutes.push({
-        title: "Pod Security Policies",
-        component: PodSecurityPolicies,
-        url: routes.podSecurityPoliciesURL(),
-        routePath: routes.podSecurityPoliciesRoute.path.toString(),
-      });
-    }
-
     return tabRoutes;
   }
 

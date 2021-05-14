@@ -19,7 +19,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { getExtensionPageUrl, globalPageRegistry, PageParams } from "../page-registry";
+import { ClusterPageRegistry, getExtensionPageUrl, GlobalPageRegistry, PageParams } from "../page-registry";
 import { LensExtension } from "../../lens-extension";
 import React from "react";
 import { Console } from "console";
@@ -42,7 +42,8 @@ describe("getPageUrl", () => {
       isBundled: false,
       isEnabled: true
     });
-    globalPageRegistry.add({
+    ClusterPageRegistry.createInstance();
+    GlobalPageRegistry.createInstance().add({
       id: "page-with-params",
       components: {
         Page: () => React.createElement("Page with params")
@@ -52,6 +53,11 @@ describe("getPageUrl", () => {
         test2: "" // no default value, just declaration
       },
     }, ext);
+  });
+
+  afterEach(() => {
+    GlobalPageRegistry.resetInstance();
+    ClusterPageRegistry.resetInstance();
   });
 
   it("returns a page url for extension", () => {
@@ -109,7 +115,8 @@ describe("globalPageRegistry", () => {
       isBundled: false,
       isEnabled: true
     });
-    globalPageRegistry.add([
+    ClusterPageRegistry.createInstance();
+    GlobalPageRegistry.createInstance().add([
       {
         id: "test-page",
         components: {
@@ -130,9 +137,14 @@ describe("globalPageRegistry", () => {
     ], ext);
   });
 
+  afterEach(() => {
+    GlobalPageRegistry.resetInstance();
+    ClusterPageRegistry.resetInstance();
+  });
+
   describe("getByPageTarget", () => {
     it("matching to first registered page without id", () => {
-      const page = globalPageRegistry.getByPageTarget({ extensionId: ext.name });
+      const page = GlobalPageRegistry.getInstance().getByPageTarget({ extensionId: ext.name });
 
       expect(page.id).toEqual(undefined);
       expect(page.extensionId).toEqual(ext.name);
@@ -140,7 +152,7 @@ describe("globalPageRegistry", () => {
     });
 
     it("returns matching page", () => {
-      const page = globalPageRegistry.getByPageTarget({
+      const page = GlobalPageRegistry.getInstance().getByPageTarget({
         pageId: "test-page",
         extensionId: ext.name
       });
@@ -149,7 +161,7 @@ describe("globalPageRegistry", () => {
     });
 
     it("returns null if target not found", () => {
-      const page = globalPageRegistry.getByPageTarget({
+      const page = GlobalPageRegistry.getInstance().getByPageTarget({
         pageId: "wrong-page",
         extensionId: ext.name
       });

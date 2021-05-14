@@ -56,6 +56,7 @@ import { HelmRepoManager } from "./helm/helm-repo-manager";
 import { KubeconfigSyncManager } from "./catalog-sources";
 import { handleWsUpgrade } from "./proxy/ws-upgrade";
 import configurePackages from "../common/configure-packages";
+import { initRegistries } from "./initializers";
 
 const workingDir = path.join(app.getPath("appData"), appName);
 const cleanup = disposer();
@@ -171,6 +172,7 @@ app.on("ready", async () => {
     app.exit();
   }
 
+  initRegistries();
   const extensionDiscovery = ExtensionDiscovery.createInstance();
 
   ExtensionLoader.createInstance().init();

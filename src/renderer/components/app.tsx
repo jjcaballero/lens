@@ -31,8 +31,8 @@ import { appEventBus } from "../../common/event-bus";
 import { requestMain } from "../../common/ipc";
 import { isAllowedResource } from "../../common/rbac";
 import { ExtensionLoader } from "../../extensions/extension-loader";
-import { ClusterPageMenuRegistration, clusterPageMenuRegistry } from "../../extensions/registries";
-import { clusterPageRegistry, getExtensionPageUrl } from "../../extensions/registries/page-registry";
+import { ClusterPageMenuRegistration, ClusterPageMenuRegistry } from "../../extensions/registries";
+import { ClusterPageRegistry, getExtensionPageUrl } from "../../extensions/registries/page-registry";
 import logger from "../../main/logger";
 import { kubeWatchApi } from "../api/kube-watch-api";
 import { KubeObjectStore } from "../kube-object.store";
@@ -121,8 +121,8 @@ export class App extends React.Component {
     if (!menuItem.id) {
       return routes;
     }
-    clusterPageMenuRegistry.getSubItems(menuItem).forEach((subMenu) => {
-      const page = clusterPageRegistry.getByPageTarget(subMenu.target);
+    ClusterPageMenuRegistry.getInstance().getSubItems(menuItem).forEach((subMenu) => {
+      const page = ClusterPageRegistry.getInstance().getByPageTarget(subMenu.target);
 
       if (page) {
         routes.push({
@@ -138,7 +138,7 @@ export class App extends React.Component {
   }
 
   renderExtensionTabLayoutRoutes() {
-    return clusterPageMenuRegistry.getRootItems().map((menu, index) => {
+    return ClusterPageMenuRegistry.getInstance().getRootItems().map((menu, index) => {
       const tabRoutes = this.getTabLayoutRoutes(menu);
 
       if (tabRoutes.length > 0) {
@@ -146,7 +146,7 @@ export class App extends React.Component {
 
         return <Route key={`extension-tab-layout-route-${index}`} component={pageComponent} path={tabRoutes.map((tab) => tab.routePath)}/>;
       } else {
-        const page = clusterPageRegistry.getByPageTarget(menu.target);
+        const page = ClusterPageRegistry.getInstance().getByPageTarget(menu.target);
 
         if (page) {
           return <Route key={`extension-tab-layout-route-${index}`} path={page.url} component={page.components.Page}/>;
@@ -158,8 +158,8 @@ export class App extends React.Component {
   }
 
   renderExtensionRoutes() {
-    return clusterPageRegistry.getItems().map((page, index) => {
-      const menu = clusterPageMenuRegistry.getByPage(page);
+    return ClusterPageRegistry.getInstance().getItems().map((page, index) => {
+      const menu = ClusterPageMenuRegistry.getInstance().getByPage(page);
 
       if (!menu) {
         return <Route key={`extension-route-${index}`} path={page.url} component={page.components.Page}/>;

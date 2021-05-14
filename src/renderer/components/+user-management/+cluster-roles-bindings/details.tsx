@@ -25,9 +25,7 @@ import { observable, reaction } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 import React from "react";
 
-import { KubeEventDetails } from "../../+events/kube-event-details";
 import type { ClusterRoleBinding, ClusterRoleBindingSubject } from "../../../api/endpoints";
-import { kubeObjectDetailRegistry } from "../../../api/kube-object-detail-registry";
 import { autoBind, prevDefault } from "../../../utils";
 import { AddRemoveButtons } from "../../add-remove-buttons";
 import { ConfirmDialog } from "../../confirm-dialog";
@@ -149,19 +147,3 @@ export class ClusterRoleBindingDetails extends React.Component<Props> {
     );
   }
 }
-
-kubeObjectDetailRegistry.add({
-  kind: "ClusterRoleBinding",
-  apiVersions: ["rbac.authorization.k8s.io/v1"],
-  components: {
-    Details: (props) => <ClusterRoleBindingDetails {...props} />
-  }
-});
-kubeObjectDetailRegistry.add({
-  kind: "ClusterRoleBinding",
-  apiVersions: ["rbac.authorization.k8s.io/v1"],
-  priority: 5,
-  components: {
-    Details: (props) => <KubeEventDetails {...props} />
-  }
-});
