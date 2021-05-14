@@ -21,11 +21,15 @@
 import { apiManager } from "../../../api/api-manager";
 import { Role, roleApi } from "../../../api/endpoints";
 import { KubeObjectStore } from "../../../kube-object.store";
-import { autobind } from "../../../utils";
+import { autoBind } from "../../../utils";
 
-@autobind()
 export class RolesStore extends KubeObjectStore<Role> {
   api = roleApi;
+
+  constructor() {
+    super();
+    autoBind(this);
+  }
 
   protected sortItems(items: Role[]) {
     return super.sortItems(items, [

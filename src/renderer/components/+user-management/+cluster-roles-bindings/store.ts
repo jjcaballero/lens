@@ -24,11 +24,15 @@ import uniqBy from "lodash/uniqBy";
 import { apiManager } from "../../../api/api-manager";
 import { ClusterRoleBinding, clusterRoleBindingApi, ClusterRoleBindingSubject } from "../../../api/endpoints";
 import { KubeObjectStore } from "../../../kube-object.store";
-import { autobind } from "../../../utils";
+import { autoBind } from "../../../utils";
 
-@autobind()
 export class ClusterRoleBindingsStore extends KubeObjectStore<ClusterRoleBinding> {
   api = clusterRoleBindingApi;
+
+  constructor() {
+    super();
+    autoBind(this);
+  }
 
   protected sortItems(items: ClusterRoleBinding[]) {
     return super.sortItems(items, [

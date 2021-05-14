@@ -28,7 +28,7 @@ import React from "react";
 import { KubeEventDetails } from "../../+events/kube-event-details";
 import type { ClusterRoleBinding, ClusterRoleBindingSubject } from "../../../api/endpoints";
 import { kubeObjectDetailRegistry } from "../../../api/kube-object-detail-registry";
-import { autobind, prevDefault } from "../../../utils";
+import { autoBind, prevDefault } from "../../../utils";
 import { AddRemoveButtons } from "../../add-remove-buttons";
 import { ConfirmDialog } from "../../confirm-dialog";
 import { DrawerTitle } from "../../drawer";
@@ -44,6 +44,11 @@ interface Props extends KubeObjectDetailsProps<ClusterRoleBinding> {
 @observer
 export class ClusterRoleBindingDetails extends React.Component<Props> {
   @observable selectedSubjects = observable.array<ClusterRoleBindingSubject>([], { deep: false });
+
+  constructor(props: Props) {
+    super(props);
+    autoBind(this);
+  }
 
   async componentDidMount() {
     disposeOnUnmount(this, [
@@ -64,7 +69,6 @@ export class ClusterRoleBindingDetails extends React.Component<Props> {
     );
   }
 
-  @autobind()
   removeSelectedSubjects() {
     const { object: roleBinding } = this.props;
     const { selectedSubjects } = this;

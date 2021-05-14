@@ -23,7 +23,6 @@ import "./create-dialog.scss";
 
 import React from "react";
 import { makeObservable, observable } from "mobx";
-import { observable } from "mobx";
 import { observer } from "mobx-react";
 
 import { NamespaceSelect } from "../../+namespaces/namespace-select";

@@ -21,11 +21,15 @@
 import { apiManager } from "../../../api/api-manager";
 import { ClusterRole, clusterRoleApi } from "../../../api/endpoints";
 import { KubeObjectStore } from "../../../kube-object.store";
-import { autobind } from "../../../utils";
+import { autoBind } from "../../../utils";
 
-@autobind()
 export class ClusterRolesStore extends KubeObjectStore<ClusterRole> {
   api = clusterRoleApi;
+
+  constructor() {
+    super();
+    autoBind(this);
+  }
 
   protected sortItems(items: ClusterRole[]) {
     return super.sortItems(items, [
