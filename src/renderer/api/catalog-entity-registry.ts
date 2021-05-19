@@ -20,7 +20,7 @@
  */
 
 import { computed, observable, makeObservable } from "mobx";
-import { subscribeToBroadcast } from "../../common/ipc";
+import { ipcRendererOn } from "../../common/ipc";
 import { CatalogCategory, CatalogEntity, CatalogEntityData, catalogCategoryRegistry, CatalogCategoryRegistry, CatalogEntityKindData } from "../../common/catalog";
 import "../../common/catalog-entities";
 import { iter } from "../utils";
@@ -34,7 +34,7 @@ export class CatalogEntityRegistry {
   }
 
   init() {
-    subscribeToBroadcast("catalog:items", (ev, items: (CatalogEntityData & CatalogEntityKindData)[]) => {
+    ipcRendererOn("catalog:items", (event, items: (CatalogEntityData & CatalogEntityKindData)[]) => {
       this.rawItems.replace(items);
     });
   }
