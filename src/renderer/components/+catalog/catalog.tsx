@@ -47,7 +47,7 @@ enum sortBy {
   status = "status"
 }
 
-interface Props extends RouteComponentProps<ICatalogViewRouteParam> {}
+interface Props extends RouteComponentProps<ICatalogViewRouteParam> { }
 
 @observer
 export class Catalog extends React.Component<Props> {
@@ -172,7 +172,7 @@ export class Catalog extends React.Component<Props> {
             </MenuItem>
           ))
         }
-        <MenuItem key="add-to-hotbar" onClick={() => this.addToHotbar(item) }>
+        <MenuItem key="add-to-hotbar" onClick={() => this.addToHotbar(item)}>
           Pin to Hotbar
         </MenuItem>
       </MenuActions>
@@ -217,9 +217,9 @@ export class Catalog extends React.Component<Props> {
           store={this.catalogEntityStore}
           tableId="catalog-items"
           sortingCallbacks={{
-            [sortBy.name]: (item: CatalogEntityItem) => item.name,
-            [sortBy.source]: (item: CatalogEntityItem) => item.source,
-            [sortBy.status]: (item: CatalogEntityItem) => item.phase,
+            [sortBy.name]: item => item.name,
+            [sortBy.source]: item => item.source,
+            [sortBy.status]: item => item.phase,
           }}
           searchFilters={[
             (entity: CatalogEntityItem) => entity.searchFields,
@@ -231,14 +231,14 @@ export class Catalog extends React.Component<Props> {
             { title: "Labels", className: "labels" },
             { title: "Status", className: "status", sortBy: sortBy.status },
           ]}
-          renderTableContents={(item: CatalogEntityItem) => [
+          renderTableContents={item => [
             this.renderIcon(item),
             item.name,
             item.source,
             item.labels.map((label) => <Badge key={label} label={label} title={label} />),
             { title: item.phase, className: kebabCase(item.phase) }
           ]}
-          onDetails={(item: CatalogEntityItem) => this.onDetails(item) }
+          onDetails={item => this.onDetails(item)}
           renderItemMenu={this.renderItemMenu}
         />
         <CatalogAddButton category={this.catalogEntityStore.activeCategory} />

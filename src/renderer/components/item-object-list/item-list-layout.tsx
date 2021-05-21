@@ -26,7 +26,7 @@ import React, { ReactNode } from "react";
 import { computed, makeObservable } from "mobx";
 import { disposeOnUnmount, observer } from "mobx-react";
 import { ConfirmDialog, ConfirmDialogParams } from "../confirm-dialog";
-import { Table, TableCell, TableCellProps, TableHead, TableProps, TableRow, TableRowProps, TableSortCallback } from "../table";
+import { Table, TableCell, TableCellProps, TableHead, TableProps, TableRow, TableRowProps, TableSortCallbacks } from "../table";
 import { boundMethod, createStorage, cssNames, IClassName, isReactNode, noop, ObservableToggleSet, prevDefault, stopPropagation } from "../../utils";
 import { AddRemoveButtons, AddRemoveButtonsProps } from "../add-remove-buttons";
 import { NoItems } from "../no-items";
@@ -46,8 +46,10 @@ import { namespaceStore } from "../+namespaces/namespace.store";
 
 // todo: refactor, split to small re-usable components
 
-export type SearchFilter<T extends ItemObject = any> = (item: T) => string | number | (string | number)[];
-export type ItemsFilter<T extends ItemObject = any> = (items: T[]) => T[];
+export type SearchFilter<Item extends ItemObject> = (item: Item) => string | number | (string | number)[];
+export type SearchFilters<Item extends ItemObject> = Record<string, SearchFilter<Item>>;
+export type ItemsFilter<Item extends ItemObject> = (items: Item[]) => Item[];
+export type ItemsFilters<Item extends ItemObject> = Record<string, ItemsFilter<Item>>;
 
 export interface IHeaderPlaceholders {
   title: ReactNode;
@@ -56,23 +58,23 @@ export interface IHeaderPlaceholders {
   info: ReactNode;
 }
 
-export interface ItemListLayoutProps<T extends ItemObject = ItemObject> {
+export interface ItemListLayoutProps<Item extends ItemObject> {
   tableId?: string;
   className: IClassName;
-  items?: T[];
-  store: ItemStore<T>;
-  dependentStores?: ItemStore[];
+  items?: Item[];
+  store: ItemStore<Item>;
+  dependentStores?: ItemStore<ItemObject>[];
   preloadStores?: boolean;
   isClusterScoped?: boolean;
   hideFilters?: boolean;
-  searchFilters?: SearchFilter<T>[];
+  searchFilters?: SearchFilter<Item>[];
   /** @deprecated */
-  filterItems?: ItemsFilter<T>[];
+  filterItems?: ItemsFilter<Item>[];
 
   // header (title, filtering, searching, etc.)
   showHeader?: boolean;
   headerClassName?: IClassName;
-  renderHeaderTitle?: ReactNode | ((parent: ItemListLayout) => ReactNode);
+  renderHeaderTitle?: ReactNode | ((parent: ItemListLayout<Item>) => ReactNode);
   customizeHeader?: (placeholders: IHeaderPlaceholders, content: ReactNode) => Partial<IHeaderPlaceholders> | ReactNode;
 
   // items list configuration
@@ -81,26 +83,28 @@ export interface ItemListLayoutProps<T extends ItemObject = ItemObject> {
   isSearchable?: boolean; // apply search-filter & add search-input
   isConfigurable?: boolean;
   copyClassNameFromHeadCells?: boolean;
-  sortingCallbacks?: { [sortBy: string]: TableSortCallback };
-  tableProps?: Partial<TableProps>; // low-level table configuration
+  sortingCallbacks?: TableSortCallbacks<Item>;
+  tableProps?: Partial<TableProps<Item>>; // low-level table configuration
   renderTableHeader: TableCellProps[] | null;
-  renderTableContents: (item: T) => (ReactNode | TableCellProps)[];
-  renderItemMenu?: (item: T, store: ItemStore<T>) => ReactNode;
-  customizeTableRowProps?: (item: T) => Partial<TableRowProps>;
+  renderTableContents: (item: Item) => (ReactNode | TableCellProps)[];
+  renderItemMenu?: (item: Item, store: ItemStore<Item>) => ReactNode;
+  customizeTableRowProps?: (item: Item) => Partial<TableRowProps>;
   addRemoveButtons?: Partial<AddRemoveButtonsProps>;
   virtual?: boolean;
 
   // item details view
   hasDetailsView?: boolean;
-  detailsItem?: T;
-  onDetails?: (item: T) => void;
+  detailsItem?: Item;
+  onDetails?: (item: Item) => void;
 
   // other
-  customizeRemoveDialog?: (selectedItems: T[]) => Partial<ConfirmDialogParams>;
-  renderFooter?: (parent: ItemListLayout) => React.ReactNode;
+  customizeRemoveDialog?: (selectedItems: Item[]) => Partial<ConfirmDialogParams>;
+  renderFooter?: (parent: ItemListLayout<Item>) => React.ReactNode;
+
+  filterCallbacks?: ItemsFilters<Item>;
 }
 
-const defaultProps: Partial<ItemListLayoutProps> = {
+const defaultProps: Partial<ItemListLayoutProps<ItemObject>> = {
   showHeader: true,
   isSearchable: true,
   isSelectable: true,
@@ -116,14 +120,14 @@ const defaultProps: Partial<ItemListLayoutProps> = {
 };
 
 @observer
-export class ItemListLayout extends React.Component<ItemListLayoutProps> {
+export class ItemListLayout<Item extends ItemObject> extends React.Component<ItemListLayoutProps<Item>> {
   static defaultProps = defaultProps as object;
 
   private storage = createStorage("item_list_layout", {
     showFilters: false, // setup defaults
   });
 
-  constructor(props: ItemListLayoutProps) {
+  constructor(props: ItemListLayoutProps<Item>) {
     super(props);
     makeObservable(this);
   }
@@ -166,7 +170,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
     stores.forEach(store => store.loadAll(namespaceStore.contextNamespaces));
   }
 
-  private filterCallbacks: { [type: string]: ItemsFilter } = {
+  private filterCallbacks: ItemsFilters<Item> = {
     [FilterType.SEARCH]: items => {
       const { searchFilters, isSearchable } = this.props;
       const search = pageFilters.getValues(FilterType.SEARCH)[0] || "";
@@ -182,16 +186,6 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
             return sourceTexts.some(source => searchTexts.some(search => source.includes(search)));
           });
         });
-      }
-
-      return items;
-    },
-
-    [FilterType.NAMESPACE]: items => {
-      const filterValues = pageFilters.getValues(FilterType.NAMESPACE);
-
-      if (filterValues.length > 0) {
-        return items.filter(item => filterValues.includes(item.getNs()));
       }
 
       return items;
@@ -217,20 +211,20 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
     return activeFilters;
   }
 
-  applyFilters<T>(filters: ItemsFilter[], items: T[]): T[] {
+  applyFilters(filters: ItemsFilter<Item>[], items: Item[]): Item[] {
     if (!filters || !filters.length) return items;
 
     return filters.reduce((items, filter) => filter(items), items);
   }
 
   @computed get items() {
-    const {filters, filterCallbacks } = this;
+    const { filters, filterCallbacks, props } = this;
     const filterGroups = groupBy<Filter>(filters, ({ type }) => type);
 
-    const filterItems: ItemsFilter[] = [];
+    const filterItems: ItemsFilter<Item>[] = [];
 
     Object.entries(filterGroups).forEach(([type, filtersGroup]) => {
-      const filterCallback = filterCallbacks[type];
+      const filterCallback = filterCallbacks[type] ?? props.filterCallbacks?.[type];
 
       if (filterCallback && filtersGroup.length > 0) {
         filterItems.push(filterCallback);
@@ -330,7 +324,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
       return null;
     }
 
-    return <PageFiltersList filters={filters}/>;
+    return <PageFiltersList filters={filters} />;
   }
 
   renderNoItems() {
@@ -355,7 +349,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
       );
     }
 
-    return <NoItems/>;
+    return <NoItems />;
   }
 
   renderItems() {
@@ -405,12 +399,12 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
       title: <h5 className="title">{title}</h5>,
       info: this.renderInfo(),
       filters: <>
-        {!isClusterScoped && <NamespaceSelectFilter/>}
+        {!isClusterScoped && <NamespaceSelectFilter />}
         <PageFiltersSelect allowEmpty disableFilters={{
           [FilterType.NAMESPACE]: true, // namespace-select used instead
-        }}/>
+        }} />
       </>,
-      search: <SearchInputUrl/>,
+      search: <SearchInputUrl />,
     };
     let header = this.renderHeaderContent(placeholders);
 
