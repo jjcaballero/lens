@@ -45,16 +45,20 @@ const parseEnv = (env: string) => {
 	return ret;
 };
 
-export async function shellEnv(shell?: string): Promise<ShellEnvVars> {
+export async function shellEnv(shell?: string, timeout?: number): Promise<ShellEnvVars> {
 	if (process.platform === 'win32') {
 		return process.env;
 	}
 
+	timeout ??= 0;
+
+	let subprocess: execa.ExecaReturnValue<string>;
+
 	try {
-		const {stdout} = await execa(shell || defaultShell, args, {env});
-		return parseEnv(stdout);
+		subprocess = await execa(shell || defaultShell, args, {env, timeout});
+		return parseEnv(subprocess.stdout);
 	} catch (error) {
-		if (shell) {
+		if (shell || subprocess.timedOut) {
 			throw error;
 		} else {
 			return process.env;

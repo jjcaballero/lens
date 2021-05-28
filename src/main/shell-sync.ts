@@ -19,7 +19,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import shellEnv from "shell-env";
+import { shellEnv } from "./utils/shell-env";
 import os from "os";
 import { app } from "electron";
 import logger from "./logger";
@@ -38,12 +38,7 @@ export async function shellSync() {
   let envVars = {};
 
   try {
-    envVars = await Promise.race([
-      shellEnv(shell),
-      new Promise((_resolve, reject) => setTimeout(() => {
-        reject(new Error("Resolving shell environment is taking very long. Please review your shell configuration."));
-      }, 5_000))
-    ]);
+    envVars = await shellEnv(shell, 5000);
   } catch (error) {
     logger.error(`shellEnv: ${error}`);
   }

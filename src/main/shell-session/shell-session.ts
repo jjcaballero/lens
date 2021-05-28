@@ -22,7 +22,7 @@
 import type { Cluster } from "../cluster";
 import { Kubectl } from "../kubectl";
 import type * as WebSocket from "ws";
-import shellEnv from "shell-env";
+import { shellEnv } from "../utils/shell-env";
 import { app } from "electron";
 import { clearKubeconfigEnvVars } from "../utils/clear-kube-env-vars";
 import path from "path";
@@ -30,6 +30,7 @@ import { isWindows } from "../../common/vars";
 import { UserStore } from "../../common/user-store";
 import * as pty from "node-pty";
 import { appEventBus } from "../../common/event-bus";
+import logger from "../logger"
 
 export class ShellOpenError extends Error {
   constructor(message: string, public cause: Error) {
@@ -138,7 +139,17 @@ export abstract class ShellSession {
   }
 
   protected async getShellEnv() {
-    const env = clearKubeconfigEnvVars(JSON.parse(JSON.stringify(await shellEnv())));
+    let envVars = {};
+
+    try {
+      console.log("calling shellEnv from getShellEnv()")
+      envVars = await shellEnv(undefined, 5000);
+    } catch (error) {
+      logger.error(`shellEnv: ${error}`);
+    }
+    console.log("envVars is ", envVars);
+    
+    const env = clearKubeconfigEnvVars(JSON.parse(JSON.stringify(envVars)));
     const pathStr = [...this.getPathEntries(), await this.kubectlBinDirP, process.env.PATH].join(path.delimiter);
     const shell = UserStore.getInstance().resolvedShell;
 
