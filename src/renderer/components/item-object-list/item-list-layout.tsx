@@ -191,13 +191,13 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
     },
   };
 
-  @computed get isClusterScoped(): boolean {
+  @computed get isNamespaced(): boolean {
     const { store, dependentStores = [] } = this.props;
     const stores = new Set([store, ...dependentStores]);
 
     for (const store of stores) {
       if (store instanceof KubeObjectStore) {
-        if (!store.api.isNamespaced) {
+        if (store.api.isNamespaced) {
           return true;
         }
       }
@@ -413,7 +413,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
       title: <h5 className="title">{title}</h5>,
       info: this.renderInfo(),
       filters: <>
-        {this.isClusterScoped && <NamespaceSelectFilter />}
+        {this.isNamespaced && <NamespaceSelectFilter />}
         <PageFiltersSelect allowEmpty disableFilters={{
           [FilterType.NAMESPACE]: true, // namespace-select used instead
         }} />
