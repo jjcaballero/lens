@@ -89,16 +89,15 @@ export class Kubectl {
   public static readonly bundledKubectlVersion: string = bundledVersion;
   public static invalidBundle = false;
   private static bundledInstance: Kubectl;
+  private static readonly versionRegex = /^v?(\d+\.\d+)(.*)/;
 
   // Returns the single bundled Kubectl instance
   public static bundled() {
-    if (!Kubectl.bundledInstance) Kubectl.bundledInstance = new Kubectl(Kubectl.bundledKubectlVersion);
-
-    return Kubectl.bundledInstance;
+    return Kubectl.bundledInstance ??= new Kubectl(Kubectl.bundledKubectlVersion);
   }
 
   constructor(clusterVersion: string) {
-    const versionParts = /^v?(\d+\.\d+)(.*)/.exec(clusterVersion);
+    const versionParts = Kubectl.versionRegex.exec(clusterVersion) ?? Kubectl.versionRegex.exec(Kubectl.bundledKubectlVersion);
     const minorVersion = versionParts[1];
 
     /* minorVersion is the first two digits of kube server version

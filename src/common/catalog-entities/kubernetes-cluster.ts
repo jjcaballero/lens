@@ -21,10 +21,9 @@
 
 import { catalogCategoryRegistry } from "../catalog/catalog-category-registry";
 import { CatalogEntity, CatalogEntityActionContext, CatalogEntityAddMenuContext, CatalogEntityContextMenuContext, CatalogEntityMetadata, CatalogEntityStatus } from "../catalog";
-import { clusterActivateHandler, clusterDisconnectHandler } from "../cluster-ipc";
+import { clusterActivateHandler, clusterDeleteHandler, clusterDisconnectHandler } from "../cluster-ipc";
 import { ClusterStore } from "../cluster-store";
 import { requestMain } from "../ipc";
-import { productName } from "../vars";
 import { CatalogCategory, CatalogCategorySpec } from "../catalog";
 import { app } from "electron";
 
@@ -101,38 +100,32 @@ export class KubernetesCluster extends CatalogEntity<CatalogEntityMetadata, Kube
   }
 
   async onContextMenuOpen(context: CatalogEntityContextMenuContext) {
-    context.menuItems = [
+    context.menuItems.push(
       {
         title: "Settings",
         onlyVisibleForSource: "local",
-        onClick: async () => context.navigate(`/entity/${this.metadata.uid}/settings`)
+        onClick: () => context.navigate(`/entity/${this.metadata.uid}/settings`)
       },
-    ];
-
-    if (this.metadata.labels["file"]?.startsWith(ClusterStore.storedKubeConfigFolder)) {
-      context.menuItems.push({
+      {
         title: "Delete",
         onlyVisibleForSource: "local",
-        onClick: async () => ClusterStore.getInstance().removeById(this.metadata.uid),
+        onClick: () => requestMain(clusterDeleteHandler, this.metadata.uid),
         confirm: {
-          message: `Remove Kubernetes Cluster "${this.metadata.name} from ${productName}?`
+          // TODO: change this to be a <p> tag with better formatting once this code can accept it.
+          message: `Delete the "${this.metadata.name}" context from "${this.metadata.labels.file}"?`
         }
-      });
-    }
+      },
+    );
 
     if (this.status.phase == "connected") {
       context.menuItems.push({
         title: "Disconnect",
-        onClick: async () => {
-          requestMain(clusterDisconnectHandler, this.metadata.uid);
-        }
+        onClick: () => requestMain(clusterDisconnectHandler, this.metadata.uid)
       });
     } else {
       context.menuItems.push({
         title: "Connect",
-        onClick: async () => {
-          context.navigate(`/cluster/${this.metadata.uid}`);
-        }
+        onClick: () => context.navigate(`/cluster/${this.metadata.uid}`)
       });
     }
 

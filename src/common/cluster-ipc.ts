@@ -25,11 +25,14 @@ import { appEventBus } from "./event-bus";
 import { ResourceApplier } from "../main/resource-applier";
 import { ipcMain, IpcMainInvokeEvent } from "electron";
 import { clusterFrameMap } from "./cluster-frames";
+import { promiseExecFile } from "../main/promise-exec";
+import logger from "../main/logger";
 
 export const clusterActivateHandler = "cluster:activate";
 export const clusterSetFrameIdHandler = "cluster:set-frame-id";
 export const clusterRefreshHandler = "cluster:refresh";
 export const clusterDisconnectHandler = "cluster:disconnect";
+export const clusterDeleteHandler = "cluster:delete";
 export const clusterKubectlApplyAllHandler = "cluster:kubectl-apply-all";
 export const clusterKubectlDeleteAllHandler = "cluster:kubectl-delete-all";
 
@@ -56,17 +59,42 @@ if (ipcMain) {
   });
 
   handleRequest(clusterDisconnectHandler, (event, clusterId: ClusterId) => {
-    appEventBus.emit({name: "cluster", action: "stop"});
+    appEventBus.emit({ name: "cluster", action: "stop" });
     const cluster = ClusterStore.getInstance().getById(clusterId);
 
-    if (cluster) {
-      cluster.disconnect();
-      clusterFrameMap.delete(cluster.id);
+    if (!cluster) {
+      return;
+    }
+
+    cluster.disconnect();
+    clusterFrameMap.delete(cluster.id);
+  });
+
+  handleRequest(clusterDeleteHandler, async (event, clusterId: ClusterId) => {
+    appEventBus.emit({ name: "cluster", action: "remove" });
+    const cluster = ClusterStore.getInstance().getById(clusterId);
+
+    if (!cluster) {
+      return;
+    }
+
+    cluster.disconnect();
+    clusterFrameMap.delete(cluster.id);
+    const kubectl = await cluster.ensureKubectl();
+    const kubectlPath = await kubectl.getPath();
+    const args = ["config", "delete-context", cluster.contextName, "--kubeconfig", cluster.kubeConfigPath];
+
+    try {
+      await promiseExecFile(kubectlPath, args);
+    } catch ({ stderr }) {
+      logger.error(`[CLUSTER-REMOVE]: failed to remove cluster: ${stderr}`, { clusterId, context: cluster.contextName });
+
+      throw `Failed to remove cluster: ${stderr}`;
     }
   });
 
   handleRequest(clusterKubectlApplyAllHandler, async (event, clusterId: ClusterId, resources: string[], extraArgs: string[]) => {
-    appEventBus.emit({name: "cluster", action: "kubectl-apply-all"});
+    appEventBus.emit({ name: "cluster", action: "kubectl-apply-all" });
     const cluster = ClusterStore.getInstance().getById(clusterId);
 
     if (cluster) {
@@ -85,7 +113,7 @@ if (ipcMain) {
   });
 
   handleRequest(clusterKubectlDeleteAllHandler, async (event, clusterId: ClusterId, resources: string[], extraArgs: string[]) => {
-    appEventBus.emit({name: "cluster", action: "kubectl-delete-all"});
+    appEventBus.emit({ name: "cluster", action: "kubectl-delete-all" });
     const cluster = ClusterStore.getInstance().getById(clusterId);
 
     if (cluster) {
