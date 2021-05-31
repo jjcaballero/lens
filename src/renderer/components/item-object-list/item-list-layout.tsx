@@ -36,12 +36,14 @@ import { SearchInputUrl } from "../input";
 import { Filter, FilterType, pageFilters } from "./page-filters.store";
 import { PageFiltersList } from "./page-filters-list";
 import { PageFiltersSelect } from "./page-filters-select";
+import { NamespaceSelectFilter } from "../+namespaces/namespace-select-filter";
 import { ThemeStore } from "../../theme.store";
 import { MenuActions } from "../menu/menu-actions";
 import { MenuItem } from "../menu";
 import { Checkbox } from "../checkbox";
 import { UserStore } from "../../../common/user-store";
 import { namespaceStore } from "../+namespaces/namespace.store";
+import { KubeObjectStore } from "../../kube-object.store";
 
 // todo: refactor, split to small re-usable components
 
@@ -154,7 +156,6 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
     const { store, dependentStores } = this.props;
     const stores = Array.from(new Set([store, ...dependentStores]));
 
-    // load context namespaces by default (see also: `<NamespaceSelectFilter/>`)
     stores.forEach(store => store.loadAll(namespaceStore.contextNamespaces));
   }
 
@@ -190,6 +191,21 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
     },
   };
 
+  @computed get isClusterScoped(): boolean {
+    const { store, dependentStores = [] } = this.props;
+    const stores = new Set([store, ...dependentStores]);
+
+    for (const store of stores) {
+      if (store instanceof KubeObjectStore) {
+        if (!store.api.isNamespaced) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   @computed get isReady() {
     return this.props.isReady ?? this.props.store.isLoaded;
   }
@@ -216,7 +232,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
   }
 
   @computed get items() {
-    const {filters, filterCallbacks } = this;
+    const { filters, filterCallbacks } = this;
     const filterGroups = groupBy<Filter>(filters, ({ type }) => type);
 
     const filterItems: ItemsFilter[] = [];
@@ -322,7 +338,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
       return null;
     }
 
-    return <PageFiltersList filters={filters}/>;
+    return <PageFiltersList filters={filters} />;
   }
 
   renderNoItems() {
@@ -347,7 +363,7 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
       );
     }
 
-    return <NoItems/>;
+    return <NoItems />;
   }
 
   renderItems() {
@@ -397,11 +413,12 @@ export class ItemListLayout extends React.Component<ItemListLayoutProps> {
       title: <h5 className="title">{title}</h5>,
       info: this.renderInfo(),
       filters: <>
+        {this.isClusterScoped && <NamespaceSelectFilter />}
         <PageFiltersSelect allowEmpty disableFilters={{
           [FilterType.NAMESPACE]: true, // namespace-select used instead
-        }}/>
+        }} />
       </>,
-      search: <SearchInputUrl/>,
+      search: <SearchInputUrl />,
     };
     let header = this.renderHeaderContent(placeholders);
 
