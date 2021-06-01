@@ -43,8 +43,6 @@ export class AllowedResources extends Singleton {
     this.resources = await requestMain(ClusterGetResourcesChannel, this.clusterId);
     this.allowedResourceMap.replace(await requestMain(ClusterResourceIsAllowedChannel, this.clusterId, this.getNamespaces()));
 
-    console.log(this.allowedResourceMap);
-
     this.disopser = reaction(() => [this.timer.tickCount, this.getNamespaces()] as const, async ([, namespaces]) => {
       this.allowedResourceMap.replace(await requestMain(ClusterResourceIsAllowedChannel, this.clusterId, namespaces));
     });
