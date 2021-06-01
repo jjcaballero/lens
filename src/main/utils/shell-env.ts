@@ -58,7 +58,7 @@ export async function shellEnv(shell?: string, timeout?: number): Promise<ShellE
 		subprocess = await execa(shell || defaultShell, args, {env, timeout});
 		return parseEnv(subprocess.stdout);
 	} catch (error) {
-		if (shell || subprocess.timedOut) {
+		if (shell || subprocess?.timedOut) {
 			throw error;
 		} else {
 			return process.env;
