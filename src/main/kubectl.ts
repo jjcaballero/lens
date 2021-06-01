@@ -31,6 +31,7 @@ import { UserStore } from "../common/user-store";
 import { customRequest } from "../common/request";
 import { getBundledKubectlVersion } from "../common/utils/app-version";
 import { isDevelopment, isWindows, isTestEnv } from "../common/vars";
+import { SemVer } from "semver";
 
 const bundledVersion = getBundledKubectlVersion();
 const kubectlMap: Map<string, string> = new Map([
@@ -89,7 +90,6 @@ export class Kubectl {
   public static readonly bundledKubectlVersion: string = bundledVersion;
   public static invalidBundle = false;
   private static bundledInstance: Kubectl;
-  private static readonly versionRegex = /^v?(\d+\.\d+)(.*)/;
 
   // Returns the single bundled Kubectl instance
   public static bundled() {
@@ -97,8 +97,15 @@ export class Kubectl {
   }
 
   constructor(clusterVersion: string) {
-    const versionParts = Kubectl.versionRegex.exec(clusterVersion) ?? Kubectl.versionRegex.exec(Kubectl.bundledKubectlVersion);
-    const minorVersion = versionParts[1];
+    let version: SemVer;
+
+    try {
+      version = new SemVer(clusterVersion, { includePrerelease: false });
+    } catch {
+      version = new SemVer(Kubectl.bundledKubectlVersion);
+    }
+
+    const minorVersion = `${version.major}.${version.minor}`;
 
     /* minorVersion is the first two digits of kube server version
        if the version map includes that, use that version, if not, fallback to the exact x.y.z of kube version */
@@ -106,7 +113,7 @@ export class Kubectl {
       this.kubectlVersion = kubectlMap.get(minorVersion);
       logger.debug(`Set kubectl version ${this.kubectlVersion} for cluster version ${clusterVersion} using version map`);
     } else {
-      this.kubectlVersion = versionParts[1] + versionParts[2];
+      this.kubectlVersion = version.format();
       logger.debug(`Set kubectl version ${this.kubectlVersion} for cluster version ${clusterVersion} using fallback`);
     }
 

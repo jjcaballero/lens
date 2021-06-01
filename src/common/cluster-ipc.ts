@@ -27,6 +27,7 @@ import { ipcMain, IpcMainInvokeEvent } from "electron";
 import { clusterFrameMap } from "./cluster-frames";
 import { promiseExecFile } from "../main/promise-exec";
 import logger from "../main/logger";
+import { bundledKubectlPath } from "../main/kubectl";
 
 export const clusterActivateHandler = "cluster:activate";
 export const clusterSetFrameIdHandler = "cluster:set-frame-id";
@@ -80,8 +81,7 @@ if (ipcMain) {
 
     cluster.disconnect();
     clusterFrameMap.delete(cluster.id);
-    const kubectl = await cluster.ensureKubectl();
-    const kubectlPath = await kubectl.getPath();
+    const kubectlPath = bundledKubectlPath();
     const args = ["config", "delete-context", cluster.contextName, "--kubeconfig", cluster.kubeConfigPath];
 
     try {

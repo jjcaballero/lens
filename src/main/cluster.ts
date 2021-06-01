@@ -88,7 +88,7 @@ export interface ClusterState {
 export class Cluster implements ClusterModel, ClusterState {
   /** Unique id for a cluster */
   public readonly id: ClusterId;
-  #kubeCtl: Kubectl;
+  private kubeCtl: Kubectl;
   /**
    * Context handler
    *
@@ -369,11 +369,11 @@ export class Cluster implements ClusterModel, ClusterState {
    * @internal
    */
   async ensureKubectl() {
-    this.#kubeCtl ??= new Kubectl(this.version);
+    this.kubeCtl ??= new Kubectl(this.version);
 
-    await this.#kubeCtl.ensureKubectl();
+    await this.kubeCtl.ensureKubectl();
 
-    return this.#kubeCtl;
+    return this.kubeCtl;
   }
 
   /**
