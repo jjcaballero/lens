@@ -21,50 +21,69 @@
 
 import { ApisApi, KubeConfig, V1APIResourceList } from "@kubernetes/client-node";
 import got from "got";
+import pLimit from "p-limit";
 import { ExtendedMap } from "../../common/utils";
 
 export interface ApiResource {
-  name: string,
-  singularName: string,
-  namespaced: boolean,
+  categories: Set<string>,
+  group: string,
   kind: string,
-  verbs: Set<string>,
+  name: string,
+  namespaced: boolean,
   shortNames: Set<string>,
+  singularName: string,
+  verbs: Set<string>,
+  version: string,
 }
 
 /**
  * Mapping between groupVersions and resource names and their information
  */
-export type ApiResourceMap = Map<string, Map<string, ApiResource>>;
+export type ApiResourceMap = Map<string, Map<string, Map<string, ApiResource>>>;
 
-export async function getClusterResources(kc: KubeConfig): Promise<ApiResourceMap> {
+/**
+ * Get the list of all resources kubernetes knows about from the current cluster of `kc`.
+ * @param kc The config of the cluster to get all resources of
+ * @param throttle The max number of inflight connections at a time
+ * @default throttle = 10
+ * @returns A mapping of groups to a mapping of versions to mappings between the resource names and information about the resources
+ */
+export async function getClusterResources(kc: KubeConfig, throttle = 10): Promise<ApiResourceMap> {
   const api = kc.makeApiClient(ApisApi);
   const { body: apiGroups } = await api.getAPIVersions();
+  const limit = pLimit(throttle);
   const promises: Promise<V1APIResourceList>[] = [
     // This is the legacy APIs
-    got.get(`${kc.getCurrentCluster().server}/api/v1`).json<V1APIResourceList>(),
+    limit(() => got.get(`${kc.getCurrentCluster().server}/api/v1`).json<V1APIResourceList>()),
   ];
 
   for (const apiGroup of apiGroups.groups) {
     for (const { groupVersion } of apiGroup.versions) {
-      promises.push(got.get(`${kc.getCurrentCluster().server}/apis/${groupVersion}`).json<V1APIResourceList>());
+      // This call returns a `V1APIResourceList` for the specific group version
+      promises.push(limit(() => got.get(`${kc.getCurrentCluster().server}/apis/${groupVersion}`).json<V1APIResourceList>()));
     }
   }
 
   const apiResourceLists = await Promise.all(promises);
-  const res = new ExtendedMap<string, ExtendedMap<string, ApiResource>>();
+  const res = new ExtendedMap<string, ExtendedMap<string, ExtendedMap<string, ApiResource>>>();
 
   for (const apiResourceList of apiResourceLists) {
-    const versions = res.getOrInsert(apiResourceList.groupVersion, ExtendedMap.new);
+    const [group, version] = apiResourceList.groupVersion.split("/");
+    const versions = res.getOrInsert(group, ExtendedMap.new);
+    const resources = versions.getOrInsert(version, ExtendedMap.new);
 
     for (const resource of apiResourceList.resources) {
-      versions.strictSet(resource.name, {
-        name: resource.name,
-        singularName: resource.singularName,
-        namespaced: resource.namespaced,
+      resources.strictSet(resource.name, {
+        categories: new Set(resource.categories ?? []),
         kind: resource.kind,
-        verbs: new Set(resource.verbs),
+        name: resource.name,
+        namespaced: resource.namespaced,
         shortNames: new Set(resource.shortNames),
+        singularName: resource.singularName,
+        verbs: new Set(resource.verbs),
+        // group and version are optional fields in the Kubernetes spec, and should be derived from the parent `V1APIResourceList`
+        group: resource.group || group,
+        version: resource.version || version,
       });
     }
   }

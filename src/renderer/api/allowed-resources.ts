@@ -25,6 +25,7 @@ import { ClusterResourceIsAllowedChannel, ClusterGetResourcesChannel, requestMai
 import { Disposer, Singleton } from "../utils";
 import type { ApiResourceMap } from "../../main/utils/api-resources";
 import { ObservableTimer } from "../../common/utils/observable-timer";
+import { Notifications } from "../components/notifications";
 
 type NamespaceName = string;
 type ResourceName = string;
@@ -33,19 +34,35 @@ export class AllowedResources extends Singleton {
   protected allowedResourceMap = new ObservableMap<ResourceName, boolean>();
   public resources: ApiResourceMap;
   protected timer = new ObservableTimer(60 * 1000);
-  disopser: Disposer;
+  disposer: Disposer;
 
   constructor(protected clusterId: ClusterId, protected getNamespaces: () => NamespaceName[]) {
     super();
   }
 
   async init() {
-    this.resources = await requestMain(ClusterGetResourcesChannel, this.clusterId);
-    this.allowedResourceMap.replace(await requestMain(ClusterResourceIsAllowedChannel, this.clusterId, this.getNamespaces()));
+    try {
+      this.resources = await requestMain(ClusterGetResourcesChannel, this.clusterId);
+    } catch (error) {
+      console.error("[ALLOWED-RESOURCES]: failed to initialize resources", error);
+      Notifications.error("Failed to initialize resources");
+    }
 
-    this.disopser = reaction(() => [this.timer.tickCount, this.getNamespaces()] as const, async ([, namespaces]) => {
+    this.refresh(this.getNamespaces());
+
+    this.disposer = reaction(
+      () => [this.timer.tickCount, this.getNamespaces()] as const, 
+      ([, namespaces]) => this.refresh(namespaces),
+    );
+  }
+
+  private async refresh(namespaces: NamespaceName[]) {
+    try {
       this.allowedResourceMap.replace(await requestMain(ClusterResourceIsAllowedChannel, this.clusterId, namespaces));
-    });
+    } catch (error) {
+      console.error("[ALLOWED-RESOURCES]: failed to refresh", error, { namespaces });
+      Notifications.error("Failed to refresh allowed resources");
+    }
   }
 
   /**
