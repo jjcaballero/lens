@@ -136,6 +136,14 @@ if (ipcMain) {
       throw `${clusterId} is not a valid cluster id`;
     }
 
+    if (cluster.accessibleNamespaces.length > 0) {
+      /**
+       * Don't allow global watching when the user has specified namespaces.
+       * Assume that the cluster can't even list namespaces
+       */
+      return false;
+    }
+
     return cluster.canUseWatchApi({ resource: "*" });
   });
 }
