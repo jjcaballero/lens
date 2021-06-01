@@ -19,7 +19,7 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-import { ClusterResourceIsAllowedChannel, ClusterGetResourcesChannel, handleRequest } from "./ipc";
+import { ClusterResourceIsAllowedChannel, ClusterGetResourcesChannel, handleRequest, ClusterGlobalWatchChannel } from "./ipc";
 import { ClusterId, ClusterStore } from "./cluster-store";
 import { appEventBus } from "./event-bus";
 import { ResourceApplier } from "../main/resource-applier";
@@ -127,5 +127,15 @@ if (ipcMain) {
     );
 
     return Array.from(isAllowed);
+  });
+
+  handleRequest(ClusterGlobalWatchChannel, async (event, clusterId: ClusterId): Promise<boolean> => {
+    const cluster = ClusterStore.getInstance().getById(clusterId);
+
+    if (!cluster) {
+      throw `${clusterId} is not a valid cluster id`;
+    }
+
+    return cluster.canUseWatchApi({ resource: "*" });
   });
 }

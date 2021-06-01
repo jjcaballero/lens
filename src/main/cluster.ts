@@ -76,7 +76,6 @@ export interface ClusterState {
   ready: boolean;
   failureReason: string;
   allowedNamespaces: string[]
-  isGlobalWatchEnabled: boolean;
 }
 
 /**
@@ -166,12 +165,6 @@ export class Cluster implements ClusterModel, ClusterState {
    */
   @observable failureReason: string;
 
-  /**
-   * Global watch-api accessibility , e.g. "/api/v1/services?watch=1"
-   *
-   * @observable
-   */
-  @observable isGlobalWatchEnabled = false;
   /**
    * Preferences
    *
@@ -426,8 +419,6 @@ export class Cluster implements ClusterModel, ClusterState {
    * @internal
    */
   private async refreshAccessibility(): Promise<void> {
-    this.isGlobalWatchEnabled = await this.canUseWatchApi({ resource: "*" });
-
     this.allowedNamespaces = await this.getAllowedNamespaces();
 
     this.ready = true;
@@ -612,7 +603,6 @@ export class Cluster implements ClusterModel, ClusterState {
       accessible: this.accessible,
       failureReason: this.failureReason,
       allowedNamespaces: this.allowedNamespaces,
-      isGlobalWatchEnabled: this.isGlobalWatchEnabled,
     };
 
     return toJS(state);
